@@ -1,0 +1,246 @@
+-- COMANDOS Utilizados 
+
+Criar o Projeto :
+
+composer create-project --prefer-dist yiisoft/yii2-app-basic sample
+
+Rodar o projeto :
+
+php yii serve
+
+*** LEMBRAR-SE  *****
+
+ir em views/site/contact.php  remover a linha 55
+
+ir em mods/contactform e remover a linha 30
+
+***  ****
+
+em seguida criar as migrations
+
+****
+
+php yii migrate/create create_books_table :
+
+**************
+
+public function safeUp()
+    {
+        $this->createTable('{{%books}}', [
+            'id' => $this->primaryKey(),
+            'title' => $this->string()->notNull(),
+            'author_id' => $this->integer()->notNull(),
+            'category_id' => $this->integer(),
+            'isbn' => $this->string(13)->unique(),
+            'published_date' => $this->date(),
+            'created_at' => $this->dateTime()->notNull()->defaultExpression('NOW()'),
+            'updated_at' => $this->dateTime()->notNull()->defaultExpression('NOW()'),
+        ]);
+
+        // add foreign key for table `authors`
+        $this->addForeignKey(
+            'fk-books-author_id',
+            'books',
+            'author_id',
+            'authors',
+            'id',
+            'CASCADE'
+        );
+
+        // add foreign key for table `categories`
+        $this->addForeignKey(
+            'fk-books-category_id',
+            'books',
+            'category_id',
+            'categories',
+            'id',
+            'SET NULL'
+        );
+    }
+
+*****************
+php yii migrate/create create_authors_table :
+
+*********************
+
+public function safeUp()
+    {
+        $this->createTable('{{%authors}}', [
+            'id' => $this->primaryKey(),
+            'name' => $this->string()->notNull(),
+            'created_at' => $this->dateTime()->notNull()->defaultExpression('NOW()'),
+            'updated_at' => $this->dateTime()->notNull()->defaultExpression('NOW()'),
+        ]);
+
+        // add foreign key for table `books`
+        $this->addForeignKey(
+            'fk-books-author_id',
+            'books',
+            'author_id',
+            'authors',
+            'id',
+            'CASCADE'
+        );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function safeDown()
+    {
+        $this->dropForeignKey('fk-books-author_id', 'books');
+        $this->dropTable('{{%authors}}');
+    }
+}
+
+
+***********
+
+php yii migarte/create create_categories_table :
+
+*****************
+
+
+ public function safeUp()
+    {
+        $this->createTable('{{%categories}}', [
+            'id' => $this->primaryKey(),
+            'name' => $this->string()->notNull(),
+            'created_at' => $this->dateTime()->notNull()->defaultExpression('NOW()'),
+            'updated_at' => $this->dateTime()->notNull()->defaultExpression('NOW()'),
+        ]);
+
+        // add foreign key for table `books`
+        $this->addForeignKey(
+            'fk-books-category_id',
+            'books',
+            'category_id',
+            'categories',
+            'id',
+            'CASCADE'
+        );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function safeDown()
+    {
+        $this->dropForeignKey('fk-books-category_id', 'books');
+        $this->dropTable('{{%categories}}');
+    }
+}
+
+
+*****************************
+
+Agora para subir as migrações :
+
+ php yii migrate/up
+
+Em seguida , utilizar o gerador do Gii
+
+http://localhost:8080/index.php?r=gii
+
+para Models e para Crud //
+
+==============================
+
+Visualização das Rotas
+
+http://localhost:8080/index.php?r=books%2Findex ( Listar )
+http://localhost:8080/index.php?r=books/create  ( Criar )
+
+http://localhost:8080/index.php?r=authors%2Findex  ( Listar )
+http://localhost:8080/index.php?r=authors/create ( Criar )
+
+http://localhost:8080/index.php?r=categories%2Findex( Listar )
+http://localhost:8080/index.php?r=categories/create ( Criar )
+
+// Criando a Página de Relatório
+
+views/books/report.php
+
+=================================
+
+<?php
+use app\Models\Books;
+use yii\helpers\Html;
+use yii\helpers\Url;
+use yii\grid\ActionColumn;
+use yii\grid\GridView;
+
+/** @var yii\web\View $this */
+/** @var yii\data\ActiveDataProvider $dataProvider */
+
+$this->title = 'Relatório de Livros';
+$this->params['breadcrumbs'][] = $this->title;
+
+?>
+
+<div class="book-report">
+    <h1><?= Html::encode($this->title) ?></h1>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Título</th>
+                <th>Autor</th>
+                <th>Categoria</th>
+                <th>ISBN</th>
+                <th>Data de Publicação</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($books as $book): ?>
+                <tr>
+                    <td><?= Html::encode($book->id) ?></td>
+                    <td><?= Html::encode($book->title) ?></td>
+                    <td><?= Html::encode($book->author->name) ?></td> <!-- Supondo que há um relacionamento com o autor -->
+                    <td><?= Html::encode($book->category->name) ?></td> <!-- Supondo que há um relacionamento com a categoria -->
+                    <td><?= Html::encode($book->isbn) ?></td>
+                    <td><?= Html::encode(Yii::$app->formatter->asDate($book->published_date)) ?></td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
+
+=====================
+
+BooksController adicionar essa função :
+
+public function actionReport()
+     {
+         $books = Books::find()->all(); // Recupera todos os livros (ou use um método de consulta mais específico)
+
+         return $this->render('report', [
+             'books' => $books,
+         ]);
+     }
+
+=====================================
+
+Por fim não esquecer de fazer uma verificação para caso a migrations não subir >
+
+
+ if ($this->db->getTableSchema('{{%books}}', true) === null) {
+            $this->createTable('{{%books}}', [
+                'id' => $this->primaryKey(),
+                'title' => $this->string()->notNull(),
+                'author_id' => $this->integer()->notNull(),
+                'category_id' => $this->integer(),
+                'isbn' => $this->string(13)->unique(),
+                'published_date' => $this->date(),
+                'created_at' => $this->dateTime()->notNull()->defaultExpression('NOW()'),
+                'updated_at' => $this->dateTime()->notNull()->defaultExpression('NOW()'),
+            ]);
+        } else {
+            echo "Table {{%books}} already exists. Skipping creation.\n";
+        }
+    }
+
+
+
+
